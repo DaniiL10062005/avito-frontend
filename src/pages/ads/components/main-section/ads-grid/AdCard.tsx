@@ -1,10 +1,17 @@
-import { Card } from "@/shared/components/Card";
-import { cn } from "@/utils/lib/utils";
 import type { AdsViewMode } from "@/pages/ads/store/useAdsViewModeStore";
+import { Card } from "@/shared/components/Card";
+import type { ItemCategory } from "@/shared/types/ads";
+import { cn } from "@/utils/lib/utils";
+
+const CATEGORY_LABELS: Record<ItemCategory, string> = {
+  auto: "Авто",
+  electronics: "Электроника",
+  real_estate: "Недвижимость",
+};
 
 export interface AdCardProps {
   imageSrc?: string;
-  category?: string;
+  category?: ItemCategory;
   name: string;
   price: number;
   improvementNeeded?: boolean;
@@ -20,7 +27,7 @@ export const AdCard = ({
   viewMode = "grid",
 }: AdCardProps) => {
   const isListView = viewMode === "list";
-  const fallbackCategory = "Категория";
+  const categoryLabel = category ? CATEGORY_LABELS[category] : "Категория";
   const improvementLabel = "Требует доработок";
 
   return (
@@ -45,12 +52,10 @@ export const AdCard = ({
         )}
       >
         {isListView ? (
-          <span className="text-sm text-[#8C8C8C]">
-            {category || fallbackCategory}
-          </span>
+          <span className="text-sm text-[#8C8C8C]">{categoryLabel}</span>
         ) : (
           <span className="absolute -top-2.5 rounded-md border border-[#D9D9D9] px-3">
-            {category || fallbackCategory}
+            {categoryLabel}
           </span>
         )}
         <p

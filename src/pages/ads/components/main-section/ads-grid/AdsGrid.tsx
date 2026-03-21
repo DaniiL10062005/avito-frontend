@@ -1,84 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-} from "@/shared/components/Pagination";
-import { cn } from "@/utils/lib/utils";
 import { useAdsViewModeStore } from "@/pages/ads/store/useAdsViewModeStore";
+import { useInfiniteAdsQuery } from "@/shared/api/queries/ads";
+import { cn } from "@/utils/lib/utils";
 
-import { AdCard, type AdCardProps } from "./AdCard";
-
-const MOCK_ADS: AdCardProps[] = [
-  {
-    category: "Электроника",
-    name: "Наушники",
-    price: 2990,
-  },
-  {
-    category: "Авто",
-    name: "Volkswagen Polo",
-    price: 1100000,
-    improvementNeeded: true,
-  },
-  {
-    category: "Недвижимость",
-    name: "Студия, 25м²",
-    price: 15000000,
-  },
-  {
-    category: "Недвижимость",
-    name: "1-кк, 44м²",
-    price: 19000000,
-    improvementNeeded: true,
-  },
-  {
-    category: "Электроника",
-    name: "MacBook Pro 16”",
-    price: 64000,
-    improvementNeeded: true,
-  },
-  {
-    category: "Авто",
-    name: "Omoda C5",
-    price: 2900000,
-  },
-  {
-    category: "Электроника",
-    name: "iPad Air 11, 2024 г.",
-    price: 37000,
-  },
-  {
-    category: "Электроника",
-    name: "MAJOR VI",
-    price: 20000,
-  },
-  {
-    category: "Авто",
-    name: "Toyota Camry",
-    price: 3900000,
-    improvementNeeded: true,
-  },
-  {
-    category: "Электроника",
-    name: "iPhone 17 Pro Max",
-    price: 107000,
-  },
-];
+import { AdCard } from "./AdCard";
 
 const CARD_WIDTH = 200;
 const CARD_GAP = 14;
-const GRID_ROWS_PER_PAGE = 2;
-const LIST_ITEMS_PER_PAGE = 4;
+const GRID_ROWS_PER_BATCH = 2;
+const LIST_ITEMS_PER_BATCH = 8;
 
 export const AdsGrid = () => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
   const viewMode = useAdsViewModeStore((state) => state.viewMode);
-  const currentPage = useAdsViewModeStore((state) => state.currentPage);
-  const setCurrentPage = useAdsViewModeStore((state) => state.setCurrentPage);
   const [cardsPerRow, setCardsPerRow] = useState(1);
 
   useEffect(() => {
@@ -108,93 +45,106 @@ export const AdsGrid = () => {
     };
   }, []);
 
-  const itemsPerPage =
+  const batchSize =
     viewMode === "list"
-      ? LIST_ITEMS_PER_PAGE
-      : cardsPerRow * GRID_ROWS_PER_PAGE;
-  const totalPages = Math.max(1, Math.ceil(MOCK_ADS.length / itemsPerPage));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
-  const currentAds = MOCK_ADS.slice(startIndex, startIndex + itemsPerPage);
-  const previousPageLabel = "Предыдущая страница";
-  const nextPageLabel = "Следующая страница";
+      ? LIST_ITEMS_PER_BATCH
+      : cardsPerRow * GRID_ROWS_PER_BATCH;
 
-  const pageButtonClassName =
-    "size-8 rounded-lg border border-[#D9D9D9] bg-white p-0 text-sm font-medium text-[#5C5F66] transition-colors hover:border-[#1677FF] hover:text-[#1677FF]";
-  const arrowButtonClassName =
-    "size-8 rounded-lg border border-[#D9D9D9] bg-white p-0 text-[#A9ADB8] transition-colors hover:border-[#1677FF] hover:text-[#1677FF] aria-disabled:pointer-events-none aria-disabled:opacity-50";
+  const {
+    data,
+    error,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteAdsQuery({
+    batchSize,
+    viewMode,
+  });
+
+  const ads = data?.pages.flatMap((page) => page.items) ?? [];
+
+  useEffect(() => {
+    if (isLoading || isFetchingNextPage || !hasNextPage) {
+      return;
+    }
+
+    const container = scrollContainerRef.current;
+    const trigger = loadMoreTriggerRef.current;
+
+    if (!container || !trigger) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void fetchNextPage();
+        }
+      },
+      {
+        root: container,
+        rootMargin: "200px 0px",
+      },
+    );
+
+    observer.observe(trigger);
+
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, isLoading]);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-6">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div
-        ref={gridRef}
-        className={cn(
-          "w-full",
-          viewMode === "list" ? "flex flex-col gap-3" : "flex flex-wrap gap-3.5",
-        )}
+        ref={scrollContainerRef}
+        className="min-h-0 max-h-[calc(100vh-240px)] overflow-y-auto pr-2"
       >
-        {currentAds.map((ad) => (
-          <AdCard
-            key={`${ad.category}-${ad.name}`}
-            {...ad}
-            viewMode={viewMode}
-          />
-        ))}
+        <div
+          ref={gridRef}
+          className={cn(
+            "w-full",
+            viewMode === "list"
+              ? "flex flex-col gap-3"
+              : "flex flex-wrap gap-3.5",
+          )}
+        >
+          {ads.map((ad) => (
+            <AdCard
+              key={`${ad.category}-${ad.title}-${ad.price}`}
+              category={ad.category}
+              name={ad.title}
+              price={ad.price}
+              improvementNeeded={ad.needsRevision}
+              viewMode={viewMode}
+            />
+          ))}
+
+          {isLoading && (
+            <p className="text-sm text-[#8C8C8C]">Загрузка объявлений...</p>
+          )}
+
+          {!isLoading && !error && ads.length === 0 && (
+            <p className="text-sm text-[#8C8C8C]">Объявления не найдены</p>
+          )}
+
+          {error && (
+            <p className="text-sm text-red-500">
+              Не удалось загрузить объявления
+            </p>
+          )}
+
+          {!isLoading && ads.length > 0 && hasNextPage && (
+            <div ref={loadMoreTriggerRef} className="h-4 w-full">
+              {isFetchingNextPage && (
+                <p className="text-sm text-[#8C8C8C]">
+                  Загружаем еще объявления...
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      <Pagination className="justify-start">
-        <PaginationContent className="gap-2">
-          <PaginationItem>
-            <PaginationLink
-              href="#"
-              aria-label={previousPageLabel}
-              aria-disabled={safeCurrentPage === 1}
-              className={arrowButtonClassName}
-              onClick={(event) => {
-                event.preventDefault();
-                setCurrentPage(Math.max(safeCurrentPage - 1, 1));
-              }}
-            >
-              <ChevronLeft />
-            </PaginationLink>
-          </PaginationItem>
-
-          {Array.from({ length: totalPages }, (_, index) => {
-            const page = index + 1;
-
-            return (
-              <PaginationItem key={page}>
-                <PaginationLink
-                  href="#"
-                  isActive={safeCurrentPage === page}
-                  className={pageButtonClassName}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    setCurrentPage(page);
-                  }}
-                >
-                  {page}
-                </PaginationLink>
-              </PaginationItem>
-            );
-          })}
-
-          <PaginationItem>
-            <PaginationLink
-              href="#"
-              aria-label={nextPageLabel}
-              aria-disabled={safeCurrentPage === totalPages}
-              className={arrowButtonClassName}
-              onClick={(event) => {
-                event.preventDefault();
-                setCurrentPage(Math.min(safeCurrentPage + 1, totalPages));
-              }}
-            >
-              <ChevronRight />
-            </PaginationLink>
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
     </div>
   );
 };

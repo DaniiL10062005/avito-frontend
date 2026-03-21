@@ -1,3 +1,5 @@
+import type { AdsViewMode } from "@/pages/ads/store/useAdsViewModeStore";
+
 export type ItemCategory = "auto" | "real_estate" | "electronics";
 
 export type ItemUpdateIn = {
@@ -67,4 +69,20 @@ export type GetItemsQueryParams = {
   categories?: ItemCategory[];
   sortColumn?: "title" | "createdAt";
   sortDirection?: "asc" | "desc";
+};
+
+export type UseAdsQueryParams = {
+  params?: GetItemsQueryParams;
+  enabled?: boolean;
+};
+
+export type UseInfiniteAdsQueryParams = {
+  batchSize: number;
+  viewMode: AdsViewMode;
+  enabled?: boolean;
+};
+
+export type UpdateItemMutationParams = {
+  id: number;
+  data: ItemUpdateIn;
 };
