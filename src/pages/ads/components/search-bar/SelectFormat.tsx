@@ -1,11 +1,11 @@
 import { cn } from "@/utils/lib/utils";
 import { LayoutGrid, List } from "lucide-react";
-import { useState } from "react";
-
-type ViewMode = "grid" | "list";
+import { useAdsViewModeStore } from "../../store/useAdsViewModeStore";
 
 export const SelectFormat = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const viewMode = useAdsViewModeStore((state) => state.viewMode);
+  const setViewMode = useAdsViewModeStore((state) => state.setViewMode);
+
   return (
     <div className="h-8 flex items-center rounded-lg bg-muted p-2">
       <button

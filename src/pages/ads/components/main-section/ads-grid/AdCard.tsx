@@ -1,4 +1,6 @@
 import { Card } from "@/shared/components/Card";
+import { cn } from "@/utils/lib/utils";
+import type { AdsViewMode } from "@/pages/ads/store/useAdsViewModeStore";
 
 export interface AdCardProps {
   imageSrc?: string;
@@ -6,6 +8,7 @@ export interface AdCardProps {
   name: string;
   price: number;
   improvementNeeded?: boolean;
+  viewMode?: AdsViewMode;
 }
 
 export const AdCard = ({
@@ -14,27 +17,58 @@ export const AdCard = ({
   name,
   price,
   improvementNeeded,
+  viewMode = "grid",
 }: AdCardProps) => {
+  const isListView = viewMode === "list";
+  const fallbackCategory = "Категория";
+  const improvementLabel = "Требует доработок";
+
   return (
-    <Card className="flex flex-col gap-0 w-50 p-0 ">
+    <Card
+      className={cn(
+        "gap-0 p-0",
+        isListView ? "w-full flex-row overflow-hidden" : "w-50 flex-col",
+      )}
+    >
       <img
-        className=" aspect-4/3 w-50 object-contain"
+        className={cn(
+          "object-contain bg-[#FAFAFA]",
+          isListView ? "h-auto w-44 shrink-0 px-6 py-4" : "aspect-4/3 w-50",
+        )}
         src={imageSrc}
         alt="Placeholder"
       />
-      <div className="flex flex-col items-start gap-1 px-4 pb-4 relative">
-        <span className="border border-[#D9D9D9] px-3 rounded-md absolute -top-2.5">
-          {category || "Категория"}
-        </span>
-        <p className="text-base font-normal leading-6 mt-5">{name}</p>
+      <div
+        className={cn(
+          "flex flex-col items-start gap-1",
+          isListView ? "px-4 py-4" : "relative px-4 pb-4",
+        )}
+      >
+        {isListView ? (
+          <span className="text-sm text-[#8C8C8C]">
+            {category || fallbackCategory}
+          </span>
+        ) : (
+          <span className="absolute -top-2.5 rounded-md border border-[#D9D9D9] px-3">
+            {category || fallbackCategory}
+          </span>
+        )}
+        <p
+          className={cn(
+            "text-base font-normal leading-6",
+            !isListView && "mt-5",
+          )}
+        >
+          {name}
+        </p>
         <p className="text-lg font-semibold opacity-45">
           {price}
           {" ₽"}
         </p>
         {improvementNeeded && (
-          <span className="bg-[#F9F1E6] flex items-center gap-2 text-[#FAAD14] text-sm font-normal px-2 rounded-lg py-px leading-6">
-            <div className="bg-[#FAAD14] rounded-full w-1.5 h-1.5"></div>
-            Требует доработок
+          <span className="flex items-center gap-2 rounded-lg bg-[#F9F1E6] px-2 py-px text-sm leading-6 font-normal text-[#FAAD14]">
+            <div className="h-1.5 w-1.5 rounded-full bg-[#FAAD14]"></div>
+            {improvementLabel}
           </span>
         )}
       </div>

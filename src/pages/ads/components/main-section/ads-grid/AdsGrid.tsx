@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import {
   Pagination,
@@ -6,9 +7,10 @@ import {
   PaginationItem,
   PaginationLink,
 } from "@/shared/components/Pagination";
+import { cn } from "@/utils/lib/utils";
+import { useAdsViewModeStore } from "@/pages/ads/store/useAdsViewModeStore";
 
 import { AdCard, type AdCardProps } from "./AdCard";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const MOCK_ADS: AdCardProps[] = [
   {
@@ -69,12 +71,15 @@ const MOCK_ADS: AdCardProps[] = [
 
 const CARD_WIDTH = 200;
 const CARD_GAP = 14;
-const ROWS_PER_PAGE = 2;
+const GRID_ROWS_PER_PAGE = 2;
+const LIST_ITEMS_PER_PAGE = 4;
 
 export const AdsGrid = () => {
   const gridRef = useRef<HTMLDivElement>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(ROWS_PER_PAGE);
+  const viewMode = useAdsViewModeStore((state) => state.viewMode);
+  const currentPage = useAdsViewModeStore((state) => state.currentPage);
+  const setCurrentPage = useAdsViewModeStore((state) => state.setCurrentPage);
+  const [cardsPerRow, setCardsPerRow] = useState(1);
 
   useEffect(() => {
     const gridElement = gridRef.current;
@@ -83,19 +88,19 @@ export const AdsGrid = () => {
       return;
     }
 
-    const updateItemsPerPage = () => {
+    const updateCardsPerRow = () => {
       const containerWidth = gridElement.clientWidth;
-      const cardsPerRow = Math.max(
+      const nextCardsPerRow = Math.max(
         1,
         Math.floor((containerWidth + CARD_GAP) / (CARD_WIDTH + CARD_GAP)),
       );
 
-      setItemsPerPage(cardsPerRow * ROWS_PER_PAGE);
+      setCardsPerRow(nextCardsPerRow);
     };
 
-    updateItemsPerPage();
+    updateCardsPerRow();
 
-    const resizeObserver = new ResizeObserver(updateItemsPerPage);
+    const resizeObserver = new ResizeObserver(updateCardsPerRow);
     resizeObserver.observe(gridElement);
 
     return () => {
@@ -103,25 +108,37 @@ export const AdsGrid = () => {
     };
   }, []);
 
+  const itemsPerPage =
+    viewMode === "list"
+      ? LIST_ITEMS_PER_PAGE
+      : cardsPerRow * GRID_ROWS_PER_PAGE;
   const totalPages = Math.max(1, Math.ceil(MOCK_ADS.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
   const currentAds = MOCK_ADS.slice(startIndex, startIndex + itemsPerPage);
+  const previousPageLabel = "Предыдущая страница";
+  const nextPageLabel = "Следующая страница";
 
   const pageButtonClassName =
     "size-8 rounded-lg border border-[#D9D9D9] bg-white p-0 text-sm font-medium text-[#5C5F66] transition-colors hover:border-[#1677FF] hover:text-[#1677FF]";
   const arrowButtonClassName =
     "size-8 rounded-lg border border-[#D9D9D9] bg-white p-0 text-[#A9ADB8] transition-colors hover:border-[#1677FF] hover:text-[#1677FF] aria-disabled:pointer-events-none aria-disabled:opacity-50";
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCurrentPage((page) => Math.min(page, totalPages));
-  }, [totalPages]);
-
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6">
-      <div ref={gridRef} className="flex flex-wrap gap-3.5">
+      <div
+        ref={gridRef}
+        className={cn(
+          "w-full",
+          viewMode === "list" ? "flex flex-col gap-3" : "flex flex-wrap gap-3.5",
+        )}
+      >
         {currentAds.map((ad) => (
-          <AdCard key={`${ad.category}-${ad.name}`} {...ad} />
+          <AdCard
+            key={`${ad.category}-${ad.name}`}
+            {...ad}
+            viewMode={viewMode}
+          />
         ))}
       </div>
 
@@ -130,12 +147,12 @@ export const AdsGrid = () => {
           <PaginationItem>
             <PaginationLink
               href="#"
-              aria-label="Предыдущая страница"
-              aria-disabled={currentPage === 1}
+              aria-label={previousPageLabel}
+              aria-disabled={safeCurrentPage === 1}
               className={arrowButtonClassName}
               onClick={(event) => {
                 event.preventDefault();
-                setCurrentPage((page) => Math.max(page - 1, 1));
+                setCurrentPage(Math.max(safeCurrentPage - 1, 1));
               }}
             >
               <ChevronLeft />
@@ -149,7 +166,7 @@ export const AdsGrid = () => {
               <PaginationItem key={page}>
                 <PaginationLink
                   href="#"
-                  isActive={currentPage === page}
+                  isActive={safeCurrentPage === page}
                   className={pageButtonClassName}
                   onClick={(event) => {
                     event.preventDefault();
@@ -165,12 +182,12 @@ export const AdsGrid = () => {
           <PaginationItem>
             <PaginationLink
               href="#"
-              aria-label="Следующая страница"
-              aria-disabled={currentPage === totalPages}
+              aria-label={nextPageLabel}
+              aria-disabled={safeCurrentPage === totalPages}
               className={arrowButtonClassName}
               onClick={(event) => {
                 event.preventDefault();
-                setCurrentPage((page) => Math.min(page + 1, totalPages));
+                setCurrentPage(Math.min(safeCurrentPage + 1, totalPages));
               }}
             >
               <ChevronRight />
