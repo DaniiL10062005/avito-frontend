@@ -42,29 +42,31 @@ export const AdCard = ({
       />
       <div
         className={cn(
-          "flex flex-col items-start gap-1",
+          "flex flex-col items-start justify-between h-full gap-1",
           isListView ? "px-4 py-4" : "relative px-4 pb-4",
         )}
       >
-        {isListView ? (
-          <span className="text-sm text-[#8C8C8C]">{categoryLabel}</span>
-        ) : (
-          <span className="absolute -top-2.5 rounded-md border border-[#D9D9D9] px-3">
-            {categoryLabel}
-          </span>
-        )}
-        <p
-          className={cn(
-            "text-base font-normal leading-6",
-            !isListView && "mt-5",
+        <div className="flex flex-col items-start justify-between w-full h-full gap-1">
+          {isListView ? (
+            <span className="text-sm text-[#8C8C8C]">{categoryLabel}</span>
+          ) : (
+            <span className="absolute -top-2.5 rounded-md border border-[#D9D9D9] px-3">
+              {categoryLabel}
+            </span>
           )}
-        >
-          {name}
-        </p>
-        <p className="text-lg font-semibold opacity-45">
-          {price}
-          {" ₽"}
-        </p>
+          <p
+            className={cn(
+              "text-base font-normal leading-6",
+              !isListView && "mt-5",
+            )}
+          >
+            {name}
+          </p>
+          <p className="text-lg font-semibold opacity-45">
+            {price}
+            {" ₽"}
+          </p>
+        </div>
         {improvementNeeded && (
           <span className="flex items-center gap-2 rounded-lg bg-[#F9F1E6] px-2 py-px text-sm leading-6 font-normal text-[#FAAD14]">
             <div className="h-1.5 w-1.5 rounded-full bg-[#FAAD14]"></div>
