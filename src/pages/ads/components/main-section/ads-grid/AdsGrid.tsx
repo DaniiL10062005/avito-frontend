@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useAdsFiltersStore } from "@/pages/ads/store/useAdsFiltersStore";
 import { useAdsViewModeStore } from "@/pages/ads/store/useAdsViewModeStore";
 import { useInfiniteAdsQuery } from "@/shared/api/queries/ads";
 import { cn } from "@/utils/lib/utils";
@@ -16,7 +17,24 @@ export const AdsGrid = () => {
   const gridRef = useRef<HTMLDivElement>(null);
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
   const viewMode = useAdsViewModeStore((state) => state.viewMode);
+  const searchQuery = useAdsFiltersStore((state) => state.searchQuery);
+  const categories = useAdsFiltersStore((state) => state.categories);
+  const needsRevisionOnly = useAdsFiltersStore(
+    (state) => state.needsRevisionOnly,
+  );
+  const sortOption = useAdsFiltersStore((state) => state.sortOption);
   const [cardsPerRow, setCardsPerRow] = useState(1);
+
+  const queryParams = useMemo(
+    () => ({
+      ...(searchQuery.trim() ? { q: searchQuery.trim() } : {}),
+      ...(categories.length > 0 ? { categories } : {}),
+      ...(needsRevisionOnly ? { needsRevision: true as const } : {}),
+      sortColumn: sortOption.sortColumn,
+      sortDirection: sortOption.sortDirection,
+    }),
+    [categories, needsRevisionOnly, searchQuery, sortOption],
+  );
 
   useEffect(() => {
     const gridElement = gridRef.current;
@@ -60,6 +78,7 @@ export const AdsGrid = () => {
   } = useInfiniteAdsQuery({
     batchSize,
     viewMode,
+    params: queryParams,
   });
 
   const ads = data?.pages.flatMap((page) => page.items) ?? [];
@@ -110,7 +129,7 @@ export const AdsGrid = () => {
         >
           {ads.map((ad) => (
             <AdCard
-              key={`${ad.category}-${ad.title}-${ad.price}`}
+              key={ad.id}
               category={ad.category}
               name={ad.title}
               price={ad.price}

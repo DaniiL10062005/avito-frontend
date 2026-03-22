@@ -1,13 +1,8 @@
 import type { AdsViewMode } from "@/pages/ads/store/useAdsViewModeStore";
 import { Card } from "@/shared/components/Card";
+import { CATEGORY_LABELS } from "@/shared/constants/category-labels";
 import type { ItemCategory } from "@/shared/types/ads";
 import { cn } from "@/utils/lib/utils";
-
-const CATEGORY_LABELS: Record<ItemCategory, string> = {
-  auto: "Авто",
-  electronics: "Электроника",
-  real_estate: "Недвижимость",
-};
 
 export interface AdCardProps {
   imageSrc?: string;

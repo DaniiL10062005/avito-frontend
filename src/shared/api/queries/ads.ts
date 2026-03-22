@@ -18,8 +18,11 @@ export const adsQueryKeys = {
   all: ["ads"] as const,
   list: (params?: GetItemsQueryParams) =>
     [...adsQueryKeys.all, "list", params ?? {}] as const,
-  infiniteList: (viewMode: AdsViewMode, batchSize: number) =>
-    [...adsQueryKeys.all, "infinite", viewMode, batchSize] as const,
+  infiniteList: (
+    viewMode: AdsViewMode,
+    batchSize: number,
+    params?: Omit<GetItemsQueryParams, "limit" | "skip">,
+  ) => [...adsQueryKeys.all, "infinite", viewMode, batchSize, params ?? {}] as const,
   detail: (id: number) => [...adsQueryKeys.all, "detail", id] as const,
 };
 
@@ -33,13 +36,15 @@ export const useAdsQuery = ({ params, enabled }: UseAdsQueryParams = {}) =>
 export const useInfiniteAdsQuery = ({
   batchSize,
   viewMode,
+  params,
   enabled,
 }: UseInfiniteAdsQueryParams) =>
   useInfiniteQuery({
-    queryKey: adsQueryKeys.infiniteList(viewMode, batchSize),
+    queryKey: adsQueryKeys.infiniteList(viewMode, batchSize, params),
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       getItems({
+        ...params,
         limit: batchSize,
         skip: pageParam,
       }),

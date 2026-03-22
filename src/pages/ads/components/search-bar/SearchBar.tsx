@@ -1,5 +1,6 @@
 import { Search } from "lucide-react";
 
+import { useAdsFiltersStore } from "@/pages/ads/store/useAdsFiltersStore";
 import { Card } from "@/shared/components/Card";
 import { Input } from "@/shared/components/Input";
 import {
@@ -10,30 +11,70 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/Select";
+
 import { SelectFormat } from "./SelectFormat";
 
+const SORT_OPTIONS = [
+  {
+    value: "title-asc",
+    label: "По названию: А → Я",
+  },
+  {
+    value: "title-desc",
+    label: "По названию: Я → А",
+  },
+  {
+    value: "createdAt-desc",
+    label: "По новизне: сначала новые",
+  },
+  {
+    value: "createdAt-asc",
+    label: "По новизне: сначала старые",
+  },
+] as const;
+
 export const Searchbar = () => {
+  const searchQuery = useAdsFiltersStore((state) => state.searchQuery);
+  const setSearchQuery = useAdsFiltersStore((state) => state.setSearchQuery);
+  const sortOption = useAdsFiltersStore((state) => state.sortOption);
+  const setSortOption = useAdsFiltersStore((state) => state.setSortOption);
+  const sortValue = `${sortOption.sortColumn}-${sortOption.sortDirection}`;
+
   return (
     <Card className="flex flex-row items-center gap-6">
       <Input
-        placeholder="Найти объявление...."
+        value={searchQuery}
+        onChange={(event) => setSearchQuery(event.target.value)}
+        placeholder="Найти объявление..."
         endIcon={<Search className="size-3" />}
       />
-      <div className="flex gap-4 items-center">
+      <div className="flex items-center gap-4">
         <SelectFormat />
         <div className="flex h-8 items-center rounded-lg bg-muted p-1">
-          <Select>
-            <SelectTrigger className="w-60 h-6! text-sm">
-              <SelectValue
-                defaultValue={1}
-                placeholder="По новизне (сначала новые)"
-              />
+          <Select
+            value={sortValue}
+            onValueChange={(value) => {
+              const [sortColumn, sortDirection] = value.split("-") as [
+                "title" | "createdAt",
+                "asc" | "desc",
+              ];
+
+              setSortOption({
+                sortColumn,
+                sortDirection,
+              });
+            }}
+          >
+            <SelectTrigger className="h-6! w-60 text-sm">
+              <SelectValue placeholder="Сортировка" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="1">По новизне (сначала новые)</SelectItem>
-                <SelectItem value="2">По цене (сначала дешевые)</SelectItem>
-                <SelectItem value="3">По цене (сначала дорогие)</SelectItem>
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>

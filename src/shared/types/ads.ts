@@ -46,9 +46,11 @@ export type Item = {
 
 export type ItemsGetOut = {
   items: {
+    id: number;
     category: ItemCategory;
     title: string;
     price: number;
+    createdAt?: string;
     needsRevision: boolean;
   }[];
   total: number;
@@ -79,6 +81,7 @@ export type UseAdsQueryParams = {
 export type UseInfiniteAdsQueryParams = {
   batchSize: number;
   viewMode: AdsViewMode;
+  params?: Omit<GetItemsQueryParams, "limit" | "skip">;
   enabled?: boolean;
 };
 
