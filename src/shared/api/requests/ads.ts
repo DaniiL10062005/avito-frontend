@@ -1,14 +1,15 @@
 import { axiosDefault } from "../client";
 import type {
   GetItemsQueryParams,
+  Item,
   ItemGetOut,
   ItemsGetOut,
   ItemUpdateIn,
 } from "@/shared/types/ads";
 
-export const getItemById = async (id: number): Promise<ItemGetOut> => {
+export const getItemById = async (id: number): Promise<Item> => {
   try {
-    const response = await axiosDefault.get<ItemGetOut>(`/items/${id}`);
+    const response = await axiosDefault.get<Item>(`/items/${id}`);
     return response.data;
   } catch (error) {
     console.error(error);

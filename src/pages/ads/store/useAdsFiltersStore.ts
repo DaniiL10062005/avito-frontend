@@ -52,12 +52,11 @@ export const useAdsFiltersStore = create<AdsFiltersStore>((set, get) => ({
       },
     }),
   getQueryParams: () => {
-    const { searchQuery, categories, needsRevisionOnly, sortOption } = get();
+    const { searchQuery, categories, sortOption } = get();
 
     return {
       ...(searchQuery.trim() ? { q: searchQuery.trim() } : {}),
       ...(categories.length > 0 ? { categories } : {}),
-      ...(needsRevisionOnly ? { needsRevision: true as const } : {}),
       sortColumn: sortOption.sortColumn,
       sortDirection: sortOption.sortDirection,
     };

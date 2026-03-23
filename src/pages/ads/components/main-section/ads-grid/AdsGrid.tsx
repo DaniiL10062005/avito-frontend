@@ -1,8 +1,11 @@
+import { useQueries } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAdsFiltersStore } from "@/pages/ads/store/useAdsFiltersStore";
 import { useAdsViewModeStore } from "@/pages/ads/store/useAdsViewModeStore";
-import { useInfiniteAdsQuery } from "@/shared/api/queries/ads";
+import { adsQueryKeys, useInfiniteAdsQuery } from "@/shared/api/queries/ads";
+import { getItemById } from "@/shared/api/requests/ads";
+import { getNeedsRevision } from "@/shared/utils/ads";
 import { cn } from "@/utils/lib/utils";
 
 import { AdCard } from "./AdCard";
@@ -29,11 +32,10 @@ export const AdsGrid = () => {
     () => ({
       ...(searchQuery.trim() ? { q: searchQuery.trim() } : {}),
       ...(categories.length > 0 ? { categories } : {}),
-      ...(needsRevisionOnly ? { needsRevision: true as const } : {}),
       sortColumn: sortOption.sortColumn,
       sortDirection: sortOption.sortDirection,
     }),
-    [categories, needsRevisionOnly, searchQuery, sortOption],
+    [categories, searchQuery, sortOption],
   );
 
   useEffect(() => {
@@ -81,7 +83,49 @@ export const AdsGrid = () => {
     params: queryParams,
   });
 
-  const ads = data?.pages.flatMap((page) => page.items) ?? [];
+  const ads = useMemo(
+    () =>
+      data?.pages.flatMap((page, pageIndex, pages) => {
+        const previousItemsCount = pages
+          .slice(0, pageIndex)
+          .reduce((total, currentPage) => total + currentPage.items.length, 0);
+
+        return page.items.map((ad, itemIndex) => ({
+          ...ad,
+          detailId: previousItemsCount + itemIndex + 1,
+        }));
+      }) ?? [],
+    [data],
+  );
+
+  const itemDetailsQueries = useQueries({
+    queries: ads.map((ad) => ({
+      queryKey: adsQueryKeys.detail(ad.detailId),
+      queryFn: () => getItemById(ad.detailId),
+      staleTime: 5 * 60 * 1000,
+    })),
+  });
+
+  const adsWithRevisionState = useMemo(
+    () =>
+      ads.map((ad, index) => {
+        const detailItem = itemDetailsQueries[index]?.data;
+
+        return {
+          ...ad,
+          needsRevision: detailItem ? getNeedsRevision(detailItem) : false,
+        };
+      }),
+    [ads, itemDetailsQueries],
+  );
+
+  const visibleAds = useMemo(
+    () =>
+      needsRevisionOnly
+        ? adsWithRevisionState.filter((ad) => ad.needsRevision)
+        : adsWithRevisionState,
+    [adsWithRevisionState, needsRevisionOnly],
+  );
 
   useEffect(() => {
     if (isLoading || isFetchingNextPage || !hasNextPage) {
@@ -127,9 +171,10 @@ export const AdsGrid = () => {
               : "flex flex-wrap gap-3.5",
           )}
         >
-          {ads.map((ad) => (
+          {visibleAds.map((ad) => (
             <AdCard
-              key={ad.id}
+              id={ad.detailId}
+              key={ad.detailId}
               category={ad.category}
               name={ad.title}
               price={ad.price}
@@ -142,7 +187,7 @@ export const AdsGrid = () => {
             <p className="text-sm text-[#8C8C8C]">Загрузка объявлений...</p>
           )}
 
-          {!isLoading && !error && ads.length === 0 && (
+          {!isLoading && !error && visibleAds.length === 0 && (
             <p className="text-sm text-[#8C8C8C]">Объявления не найдены</p>
           )}
 
@@ -163,7 +208,6 @@ export const AdsGrid = () => {
           )}
         </div>
       </div>
-
     </div>
   );
 };

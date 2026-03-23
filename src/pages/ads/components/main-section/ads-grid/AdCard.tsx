@@ -3,6 +3,7 @@ import { Card } from "@/shared/components/Card";
 import { CATEGORY_LABELS } from "@/shared/constants/category-labels";
 import type { ItemCategory } from "@/shared/types/ads";
 import { cn } from "@/utils/lib/utils";
+import { useNavigate } from "react-router";
 
 export interface AdCardProps {
   imageSrc?: string;
@@ -11,6 +12,7 @@ export interface AdCardProps {
   price: number;
   improvementNeeded?: boolean;
   viewMode?: AdsViewMode;
+  id: number;
 }
 
 export const AdCard = ({
@@ -20,15 +22,18 @@ export const AdCard = ({
   price,
   improvementNeeded,
   viewMode = "grid",
+  id,
 }: AdCardProps) => {
   const isListView = viewMode === "list";
   const categoryLabel = category ? CATEGORY_LABELS[category] : "Категория";
   const improvementLabel = "Требует доработок";
+  const navigate = useNavigate();
 
   return (
     <Card
+      onClick={() => navigate(`/ads/${id}`)}
       className={cn(
-        "gap-0 p-0",
+        "gap-0 p-0 hover:translate-y-1 transition-all duration-300",
         isListView ? "w-full flex-row overflow-hidden" : "w-50 flex-col",
       )}
     >

@@ -33,7 +33,6 @@ export type ElectronicsItemParams = {
   condition?: "new" | "used";
   color?: string;
 };
-
 export type Item = {
   id: number;
   category: ItemCategory;
@@ -41,7 +40,9 @@ export type Item = {
   description?: string;
   price: number;
   createdAt?: string;
+  updatedAt?: string;
   params: AutoItemParams | RealEstateItemParams | ElectronicsItemParams;
+  needsRevision: boolean;
 };
 
 export type ItemsGetOut = {
