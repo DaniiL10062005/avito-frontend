@@ -2,8 +2,9 @@ import { useItemQuery } from "@/shared/api/queries/ads";
 import { Spinner } from "@/shared/components/Spinner";
 import { useEffect } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
-import { Header } from "./Header";
-import { ParamsOfAd } from "./ParamsOfAd";
+import { Header } from "./components/Header";
+import { ParamsOfAd } from "./components/ParamsOfAd";
+import { AdDescription } from "./components/AdDescription";
 
 export const Ad = () => {
   const location = useLocation();
@@ -28,9 +29,10 @@ export const Ad = () => {
     </div>
   ) : (
     <div className="min-h-screen flex flex-col gap-8 items-start p-8 w-full">
-      <Header {...data} />
+      <Header id={itemId} {...data} />
       <hr className="w-full bg-[#F0F0F0] h-px" />
       <ParamsOfAd {...data} />
+      <AdDescription description={data?.description} />
     </div>
   );
 };

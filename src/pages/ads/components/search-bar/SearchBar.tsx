@@ -46,7 +46,7 @@ export const Searchbar = () => {
         value={searchQuery}
         onChange={(event) => setSearchQuery(event.target.value)}
         placeholder="Найти объявление..."
-        endIcon={<Search className="size-3" />}
+        endIcon={<Search className="size-3 m-2 " />}
       />
       <div className="flex items-center gap-4">
         <SelectFormat />
