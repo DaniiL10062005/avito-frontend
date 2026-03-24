@@ -29,6 +29,8 @@ import { CATEGORY_LABELS } from "@/shared/constants/category-labels";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useUpdateItemMutation } from "@/shared/api/queries/ads";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { CheckCircle2, CircleX } from "lucide-react";
 
 const getFormValues = (data: Item): EditFormInput => {
   switch (data.category) {
@@ -109,7 +111,30 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
       },
       {
         onSuccess: () => {
+          toast("Изменения сохранены", {
+            icon: <CheckCircle2 className="size-5 fill-green-500 text-white" />,
+            unstyled: true,
+            className:
+              "bg-[#F6FFED] border border-[#B7EB8F] rounded-xs px-4 py-2 flex items-center gap-[10px]",
+          });
           navigate("/ads");
+        },
+        onError: () => {
+          toast("Ошибка сохранения", {
+            icon: <CircleX className="size-5 text-red-500" />,
+            description:
+              "При попытке сохранить изменения произошла ошибка. Попробуйте ещё раз или зайдите позже.",
+            unstyled: true,
+            className:
+              "bg-[#FFF1F0] border border-[#FFCCC7] rounded-xs px-4 py-3",
+            classNames: {
+              toast: "flex items-start gap-[10px]",
+              content: "flex flex-col gap-1",
+              title: "text-[16px] leading-6 font-medium text-black/85",
+              description: "text-sm leading-5 text-black! m-0",
+              icon: "shrink-0 mt-0.5",
+            },
+          });
         },
       },
     );
