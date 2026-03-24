@@ -33,7 +33,7 @@ export const AdCard = ({
     <Card
       onClick={() => navigate(`/ads/${id}`)}
       className={cn(
-        "gap-0 p-0 hover:translate-y-1 transition-all duration-300",
+        "gap-0 p-0 hover:translate-y-1 hover:shadow-[0px_3px_6px_-4px_rgba(0,0,0,0.12),0px_6px_16px_rgba(0,0,0,0.08),0px_9px_28px_8px_rgba(0,0,0,0.05)] transition-all duration-300",
         isListView ? "w-full flex-row overflow-hidden" : "w-50 flex-col",
       )}
     >

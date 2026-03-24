@@ -165,7 +165,7 @@ export const AdsGrid = () => {
         <div
           ref={gridRef}
           className={cn(
-            "w-full",
+            "w-full px-5",
             viewMode === "list"
               ? "flex flex-col gap-3"
               : "flex flex-wrap gap-3.5",
