@@ -84,24 +84,14 @@ export const AdsGrid = () => {
   });
 
   const ads = useMemo(
-    () =>
-      data?.pages.flatMap((page, pageIndex, pages) => {
-        const previousItemsCount = pages
-          .slice(0, pageIndex)
-          .reduce((total, currentPage) => total + currentPage.items.length, 0);
-
-        return page.items.map((ad, itemIndex) => ({
-          ...ad,
-          detailId: previousItemsCount + itemIndex + 1,
-        }));
-      }) ?? [],
+    () => data?.pages.flatMap((page) => page.items) ?? [],
     [data],
   );
 
   const itemDetailsQueries = useQueries({
     queries: ads.map((ad) => ({
-      queryKey: adsQueryKeys.detail(ad.detailId),
-      queryFn: () => getItemById(ad.detailId),
+      queryKey: adsQueryKeys.detail(ad.id),
+      queryFn: () => getItemById(ad.id),
       staleTime: 5 * 60 * 1000,
     })),
   });
@@ -173,8 +163,8 @@ export const AdsGrid = () => {
         >
           {visibleAds.map((ad) => (
             <AdCard
-              id={ad.detailId}
-              key={ad.detailId}
+              id={ad.id}
+              key={ad.id}
               category={ad.category}
               name={ad.title}
               price={ad.price}

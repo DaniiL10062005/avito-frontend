@@ -41,6 +41,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/shared/components/Tooltip";
+import { extractPriceFromAiResponse } from "@/shared/utils/extract-price-from-ai-response";
+import { getNumericFieldValue } from "@/shared/utils/get-numeric-field-value";
 
 const getFormValues = (data: Item): EditFormInput => {
   switch (data.category) {
@@ -85,25 +87,6 @@ interface LoadedFormProps {
 
 type AiTooltipTarget = "price" | "description";
 
-const getDigitsOnlyValue = (value: string) => value.replace(/\D+/g, "");
-
-const getNumericFieldValue = (value: string) => {
-  const digitsOnlyValue = getDigitsOnlyValue(value);
-
-  return digitsOnlyValue === "" ? "" : Number(digitsOnlyValue);
-};
-
-const extractPriceFromAiResponse = (value: string) => {
-  const match = value.match(/\d[\d\s]*/);
-
-  if (!match) {
-    return null;
-  }
-
-  const digitsOnlyValue = getDigitsOnlyValue(match[0]);
-
-  return digitsOnlyValue === "" ? null : Number(digitsOnlyValue);
-};
 
 export const LoadedForm = ({ data }: LoadedFormProps) => {
   const initialValues = getFormValues(data);
@@ -390,7 +373,7 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
               <TooltipContent
                 side="top"
                 sideOffset={8}
-                className="max-w-[360px] rounded-xl border border-black/10 bg-white p-3 text-black shadow-[0_16px_40px_rgba(0,0,0,0.14)]"
+                className="max-w-90 rounded-xl border border-black/10 bg-white p-3 text-black shadow-[0_16px_40px_rgba(0,0,0,0.14)]"
                 arrowClassName="bg-white fill-white"
               >
                 <div className="flex flex-col gap-3">
@@ -590,7 +573,7 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
               <TooltipContent
                 side="top"
                 sideOffset={8}
-                className="max-w-[360px] rounded-xl border border-black/10 bg-white p-3 text-black shadow-[0_16px_40px_rgba(0,0,0,0.14)]"
+                className="max-w-90 rounded-xl border border-black/10 bg-white p-3 text-black shadow-[0_16px_40px_rgba(0,0,0,0.14)]"
                 arrowClassName="bg-white fill-white"
               >
                 <div className="flex flex-col gap-3">

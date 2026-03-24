@@ -12,7 +12,7 @@ interface FormProps {
 export const Form = ({ id }: FormProps) => {
   const { data, isPending, isError } = useItemQuery(
     id,
-    Number.isFinite(id) && id > 0,
+    Number.isInteger(id) && id > 0,
   );
   const navigate = useNavigate();
 
