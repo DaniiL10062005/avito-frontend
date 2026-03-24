@@ -1,14 +1,27 @@
-export type AiModel = "grok-4.20";
-export type AiRole = "system" | "user";
 export type AiTask = "generate_description" | "estimate_market_price";
 
 export type AIRequest = {
-  model: AiModel;
-  messages: [
-    { role: "system"; content: string },
-    { role: "user"; content: string },
-  ];
-  temperature: number;
+  model: string;
+  prompt: string;
+  stream: false;
+  options?: {
+    temperature?: number;
+  };
+};
+
+export type AIResponse = {
+  model: string;
+  created_at: string;
+  response: string;
+  done: boolean;
+  done_reason?: string;
+  context?: number[];
+  total_duration?: number;
+  load_duration?: number;
+  prompt_eval_count?: number;
+  prompt_eval_duration?: number;
+  eval_count?: number;
+  eval_duration?: number;
 };
 
 export type AdAiContext = {

@@ -12,8 +12,8 @@ export const buildAiUserPrompt = ({ task, ad }: GetAiAnswerParams): string => {
     .join("\n");
 
   if (task === "generate_description") {
-    return `Составь качественное описание объявления на основе данных ниже.\n\n${baseInfo}`;
+    return `Составь качественное описание объявления на русском языке на основе данных ниже.\n\n${baseInfo}`;
   }
 
-  return `Оцени примерную рыночную стоимость объявления по данным ниже.\n\n${baseInfo}`;
+  return `Оцени примерную рыночную стоимость объявления по данным ниже. Ответ дай на русском языке.\n\n${baseInfo}`;
 };

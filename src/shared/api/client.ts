@@ -1,7 +1,10 @@
 import axios from "axios";
 
 const baseURL = import.meta.env.DEV ? "/api" : import.meta.env.VITE_BACKEND_URL;
-const aiURL = import.meta.env.DEV ? "/ai-api" : import.meta.env.VITE_AI_URL;
+const aiURL =
+  import.meta.env.DEV
+    ? "/ai-api"
+    : (import.meta.env.VITE_AI_URL ?? "http://localhost:11434/api/generate");
 
 export const axiosDefault = axios.create({
   baseURL,
@@ -16,6 +19,5 @@ export const axiosAi = axios.create({
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
-    Authorization: `Bearer ${import.meta.env.VITE_API_KEY}`,
   },
 });

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/shared/components/Button";
 import {
   Select,
@@ -35,6 +35,12 @@ import { formatFieldValue } from "@/shared/utils/format-field-values";
 import { AIButton } from "./AIButton";
 import { useGetAiAnswer } from "@/shared/api/queries/ai";
 import type { AiTask } from "@/shared/types/ai";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/shared/components/Tooltip";
 
 const getFormValues = (data: Item): EditFormInput => {
   switch (data.category) {
@@ -72,9 +78,12 @@ const numericParamKeys = new Set([
   "area",
   "floor",
 ]);
+
 interface LoadedFormProps {
   data: Item;
 }
+
+type AiTooltipTarget = "price" | "description";
 
 const getDigitsOnlyValue = (value: string) => value.replace(/\D+/g, "");
 
@@ -84,14 +93,30 @@ const getNumericFieldValue = (value: string) => {
   return digitsOnlyValue === "" ? "" : Number(digitsOnlyValue);
 };
 
+const extractPriceFromAiResponse = (value: string) => {
+  const match = value.match(/\d[\d\s]*/);
+
+  if (!match) {
+    return null;
+  }
+
+  const digitsOnlyValue = getDigitsOnlyValue(match[0]);
+
+  return digitsOnlyValue === "" ? null : Number(digitsOnlyValue);
+};
+
 export const LoadedForm = ({ data }: LoadedFormProps) => {
   const initialValues = getFormValues(data);
   const { mutate, isPending } = useUpdateItemMutation();
   const navigate = useNavigate();
   const priceAiMutation = useGetAiAnswer();
   const descriptionAiMutation = useGetAiAnswer();
+  const [activeTooltip, setActiveTooltip] = useState<AiTooltipTarget | null>(
+    null,
+  );
+  const [tooltipText, setTooltipText] = useState("");
 
-  const { control, handleSubmit, reset } = useForm<
+  const { control, handleSubmit, reset, setValue } = useForm<
     EditFormInput,
     unknown,
     EditFormOutput
@@ -147,24 +172,80 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
     );
   };
 
+  const showTooltip = (target: AiTooltipTarget, text: string) => {
+    setTooltipText(text);
+    setActiveTooltip(target);
+  };
+
+  const closeTooltip = () => {
+    setActiveTooltip(null);
+    setTooltipText("");
+  };
+
+  const applyTooltipValue = () => {
+    if (!activeTooltip || !tooltipText.trim()) {
+      return;
+    }
+
+    if (activeTooltip === "description") {
+      setValue("description", tooltipText, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+      closeTooltip();
+      return;
+    }
+
+    const extractedPrice = extractPriceFromAiResponse(tooltipText);
+
+    if (extractedPrice === null) {
+      toast("Не удалось распознать цену из ответа AI", {
+        icon: <CircleX className="size-5 text-red-500" />,
+        unstyled: true,
+        className:
+          "bg-[#FFF1F0] border border-[#FFCCC7] rounded-xs px-4 py-2 flex items-center gap-[10px]",
+      });
+      return;
+    }
+
+    setValue("price", extractedPrice, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+    closeTooltip();
+  };
+
   const getAnswer = (
     task: AiTask,
-    getAiAnswer: ReturnType<typeof useGetAiAnswer>["mutate"],
+    aiMutation: ReturnType<typeof useGetAiAnswer>,
+    tooltipTarget: AiTooltipTarget,
   ) => {
     if (!selectedCategory) {
       return;
     }
 
-    getAiAnswer({
-      task,
-      ad: {
-        category: selectedCategory,
-        title: title ?? "",
-        description: typeof description === "string" ? description : undefined,
-        price: typeof price === "number" ? price : undefined,
-        params,
+    aiMutation.mutate(
+      {
+        task,
+        ad: {
+          category: selectedCategory,
+          title: title ?? "",
+          description:
+            typeof description === "string" ? description : undefined,
+          price: typeof price === "number" ? price : undefined,
+          params,
+        },
       },
-    });
+      {
+        onSuccess: (response) => {
+          if (response.response.trim()) {
+            showTooltip(tooltipTarget, response.response.trim());
+          }
+        },
+      },
+    );
   };
 
   const priceButtonState = priceAiMutation.isPending
@@ -184,7 +265,7 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="flex flex-col gap-4.5 w-2/3">
+      <div className="flex w-2/3 flex-col gap-4.5">
         <div className="flex w-1/2 flex-col gap-2">
           <p className="text-base font-semibold opacity-85">Категория</p>
           <Controller
@@ -244,7 +325,7 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
           />
         </div>
         <hr />
-        <div className="min-w-1/2 flex gap-6 items-end">
+        <div className="min-w-1/2 flex items-end gap-6">
           <div className="flex flex-col gap-2">
             <p className="before:text-red-500 before:text-sm flex items-center gap-2 text-base font-semibold opacity-85 before:content-['*']">
               Цена
@@ -280,14 +361,63 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
               )}
             />
           </div>
-          <AIButton
-            onClick={() =>
-              getAnswer("estimate_market_price", priceAiMutation.mutate)
-            }
-            state={priceButtonState}
-            text="Узнать рыночную цену"
-            icon={<Lightbulb className="text-[#FFA940] size-4" />}
-          />
+
+          <TooltipProvider>
+            <Tooltip
+              open={activeTooltip === "price"}
+              onOpenChange={(open) => {
+                if (!open && activeTooltip === "price") {
+                  closeTooltip();
+                }
+              }}
+            >
+              <TooltipTrigger asChild>
+                <span>
+                  <AIButton
+                    onClick={() =>
+                      getAnswer(
+                        "estimate_market_price",
+                        priceAiMutation,
+                        "price",
+                      )
+                    }
+                    state={priceButtonState}
+                    text="Узнать рыночную цену"
+                    icon={<Lightbulb className="size-4 text-[#FFA940]" />}
+                  />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                sideOffset={8}
+                className="max-w-[360px] rounded-xl border border-black/10 bg-white p-3 text-black shadow-[0_16px_40px_rgba(0,0,0,0.14)]"
+                arrowClassName="bg-white fill-white"
+              >
+                <div className="flex flex-col gap-3">
+                  <p className="whitespace-pre-wrap text-sm leading-5">
+                    {tooltipText}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={applyTooltipValue}
+                      className="h-6 rounded-md px-2 text-sm font-normal text-white "
+                    >
+                      Применить
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={closeTooltip}
+                      className="h-6 rounded-md border-[#D9D9D9] font-normal bg-white px-2 text-sm  text-black/85 "
+                    >
+                      Закрыть
+                    </Button>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         <hr />
@@ -410,7 +540,7 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
           </div>
         </div>
         <hr />
-        <div className="flex w-full flex-col gap-2 items-start">
+        <div className="flex w-full flex-col items-start gap-2">
           <p className="text-base font-semibold opacity-85">Описание</p>
           <Controller
             control={control}
@@ -432,20 +562,68 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
               </>
             )}
           />
-          <AIButton
-            onClick={() =>
-              getAnswer("generate_description", descriptionAiMutation.mutate)
-            }
-            state={descriptionButtonState}
-            text={descriptionButtonText}
-            icon={<Lightbulb className="text-[#FFA940] size-4" />}
-          />
+          <TooltipProvider>
+            <Tooltip
+              open={activeTooltip === "description"}
+              onOpenChange={(open) => {
+                if (!open && activeTooltip === "description") {
+                  closeTooltip();
+                }
+              }}
+            >
+              <TooltipTrigger asChild>
+                <span>
+                  <AIButton
+                    onClick={() =>
+                      getAnswer(
+                        "generate_description",
+                        descriptionAiMutation,
+                        "description",
+                      )
+                    }
+                    state={descriptionButtonState}
+                    text={descriptionButtonText}
+                    icon={<Lightbulb className="size-4 text-[#FFA940]" />}
+                  />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                sideOffset={8}
+                className="max-w-[360px] rounded-xl border border-black/10 bg-white p-3 text-black shadow-[0_16px_40px_rgba(0,0,0,0.14)]"
+                arrowClassName="bg-white fill-white"
+              >
+                <div className="flex flex-col gap-3">
+                  <p className="whitespace-pre-wrap text-sm leading-5">
+                    {tooltipText}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={applyTooltipValue}
+                      className="h-6 rounded-md  px-2 text-sm text-white font-normal"
+                    >
+                      Применить
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={closeTooltip}
+                      className="h-6 rounded-md border-[#D9D9D9] font-normal bg-white px-2 text-sm text-black/85 "
+                    >
+                      Закрыть
+                    </Button>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <div className="flex gap-2.5">
           <Button
             type="submit"
             disabled={isPending}
-            className="h-9.5 w-25.5 text-[#F3F3F3] font-normal"
+            className="h-9.5 w-25.5 font-normal text-[#F3F3F3]"
           >
             Сохранить
           </Button>
@@ -453,7 +631,7 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
             type="button"
             disabled={isPending}
             onClick={() => reset(initialValues)}
-            className="h-9.5 w-25.5 bg-[#D9D9D9] text-[#5A5A5A] font-normal"
+            className="h-9.5 w-25.5 bg-[#D9D9D9] font-normal text-[#5A5A5A]"
           >
             Отменить
           </Button>
@@ -462,4 +640,3 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
     </form>
   );
 };
-
