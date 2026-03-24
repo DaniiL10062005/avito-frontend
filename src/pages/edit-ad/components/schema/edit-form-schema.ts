@@ -1,19 +1,47 @@
 import { z } from "zod";
 
+const optionalNumberField = () =>
+  z
+    .preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.coerce.number().optional(),
+    )
+    .optional();
+
+const optionalIntField = () =>
+  z
+    .preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.coerce.number().int().optional(),
+    )
+    .optional();
+
+const requiredNumberField = (message: string) =>
+  z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.number({ error: message }).min(0, message),
+  );
+
+const optionalTextField = () =>
+  z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().optional(),
+  );
+
 const autoParamsSchema = z.object({
   brand: z.string().optional(),
   model: z.string().optional(),
-  yearOfManufacture: z.coerce.number().int().optional(),
+  yearOfManufacture: optionalIntField(),
   transmission: z.enum(["automatic", "manual"]).optional(),
-  mileage: z.coerce.number().int().optional(),
-  enginePower: z.coerce.number().int().optional(),
+  mileage: optionalIntField(),
+  enginePower: optionalIntField(),
 });
 
 const realEstateParamsSchema = z.object({
   type: z.enum(["flat", "house", "room"]).optional(),
   address: z.string().optional(),
-  area: z.coerce.number().optional(),
-  floor: z.coerce.number().int().optional(),
+  area: optionalNumberField(),
+  floor: optionalIntField(),
 });
 
 const electronicsParamsSchema = z.object({
@@ -25,9 +53,9 @@ const electronicsParamsSchema = z.object({
 });
 
 export const baseEditFormSchema = z.object({
-  title: z.string().min(1, "Введите заголовок объявления"),
-  description: z.string().min(1, "Введите описание объявления"),
-  price: z.number().min(0, "Введите цену"),
+  title: z.string().min(1, "Название должно быть заполнено"),
+  description: optionalTextField(),
+  price: requiredNumberField("Цена должна быть заполнена"),
 });
 
 export const editFormSchema = z.discriminatedUnion("category", [

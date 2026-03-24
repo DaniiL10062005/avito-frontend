@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@/shared/components/Button";
 import {
   Select,
@@ -26,6 +27,8 @@ import type {
 } from "@/shared/types/ads";
 import { CATEGORY_LABELS } from "@/shared/constants/category-labels";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useUpdateItemMutation } from "@/shared/api/queries/ads";
+import { useNavigate } from "react-router";
 
 const getFormValues = (data: Item): EditFormInput => {
   switch (data.category) {
@@ -67,29 +70,54 @@ interface LoadedFormProps {
   data: Item;
 }
 
-const formatFieldValue = (value: string | number | undefined) =>
-  typeof value === "number" ? String(value) : (value ?? "");
+const formatFieldValue = (value: unknown) =>
+  typeof value === "number"
+    ? String(value)
+    : typeof value === "string"
+      ? value
+      : "";
+
+const fieldErrorClassName =
+  "!border-[#FF4D4F] focus-within:!border-[#FF4D4F] focus-within:!shadow-[0px_0px_0px_2px_rgba(255,77,79,0.2)]";
 
 export const LoadedForm = ({ data }: LoadedFormProps) => {
-  const { control, handleSubmit } = useForm<
+  const initialValues = getFormValues(data);
+  const { mutate, isPending } = useUpdateItemMutation();
+  const navigate = useNavigate();
+
+  const { control, handleSubmit, reset } = useForm<
     EditFormInput,
     unknown,
     EditFormOutput
   >({
     resolver: zodResolver(editFormSchema),
-    defaultValues: getFormValues(data),
+    defaultValues: initialValues,
   });
+
+  useEffect(() => {
+    reset(initialValues);
+  }, [initialValues, reset]);
 
   const selectedCategory = useWatch({ control, name: "category" });
   const params = useWatch({ control, name: "params" });
 
   const onSubmit = (values: EditFormOutput) => {
-    console.log(values);
+    mutate(
+      {
+        id: data.id,
+        data: values,
+      },
+      {
+        onSuccess: () => {
+          navigate("/ads");
+        },
+      },
+    );
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="flex flex-col gap-4.5">
+      <div className="flex flex-col gap-4.5 w-2/3">
         <div className="flex w-1/2 flex-col gap-2">
           <p className="text-base font-semibold opacity-85">Категория</p>
           <Controller
@@ -124,15 +152,26 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
           <Controller
             control={control}
             name="title"
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                variant="editAd"
-                clearable
-                endIcon={ClearIcon}
-                endIconClassName="h-[14px] w-[14px]"
-              />
+            render={({ field, fieldState }) => (
+              <>
+                <Input
+                  {...field}
+                  value={field.value ?? ""}
+                  aria-invalid={fieldState.invalid}
+                  variant="editAd"
+                  clearable
+                  wrapperClassName={
+                    fieldState.error ? fieldErrorClassName : undefined
+                  }
+                  endIcon={ClearIcon}
+                  endIconClassName="h-[14px] w-[14px]"
+                />
+                {fieldState.error?.message ? (
+                  <p className="text-sm text-[#FF4D4F]">
+                    {fieldState.error.message}
+                  </p>
+                ) : null}
+              </>
             )}
           />
         </div>
@@ -144,21 +183,32 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
           <Controller
             control={control}
             name="price"
-            render={({ field }) => (
-              <Input
-                value={formatFieldValue(field.value)}
-                onChange={(event) =>
-                  field.onChange(
-                    event.target.value === ""
-                      ? undefined
-                      : Number(event.target.value),
-                  )
-                }
-                variant="editAd"
-                clearable
-                endIcon={ClearIcon}
-                endIconClassName="h-[14px] w-[14px]"
-              />
+            render={({ field, fieldState }) => (
+              <>
+                <Input
+                  value={formatFieldValue(field.value)}
+                  onChange={(event) =>
+                    field.onChange(
+                      event.target.value === ""
+                        ? ""
+                        : Number(event.target.value),
+                    )
+                  }
+                  aria-invalid={fieldState.invalid}
+                  variant="editAd"
+                  clearable
+                  wrapperClassName={
+                    fieldState.error ? fieldErrorClassName : undefined
+                  }
+                  endIcon={ClearIcon}
+                  endIconClassName="h-[14px] w-[14px]"
+                />
+                {fieldState.error?.message ? (
+                  <p className="text-sm text-[#FF4D4F]">
+                    {fieldState.error.message}
+                  </p>
+                ) : null}
+              </>
             )}
           />
         </div>
@@ -182,69 +232,91 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
                       <Controller
                         control={control}
                         name={fieldName}
-                        render={({ field }) => (
-                          <Input
-                            value={formatFieldValue(field.value)}
-                            onChange={(event) =>
-                              field.onChange(
-                                isNumericField
-                                  ? event.target.value === ""
-                                    ? undefined
-                                    : Number(event.target.value)
-                                  : event.target.value,
-                              )
-                            }
-                            variant="editAd"
-                            clearable
-                            wrapperClassName={
-                              fieldValue === undefined
-                                ? "!border-[#FFA940]"
-                                : ""
-                            }
-                            endIcon={ClearIcon}
-                            endIconClassName="h-[14px] w-[14px]"
-                            placeholder={configField.placeholder}
-                          />
+                        render={({ field, fieldState }) => (
+                          <>
+                            <Input
+                              value={formatFieldValue(field.value)}
+                              onChange={(event) =>
+                                field.onChange(
+                                  isNumericField
+                                    ? event.target.value === ""
+                                      ? ""
+                                      : Number(event.target.value)
+                                    : event.target.value,
+                                )
+                              }
+                              aria-invalid={fieldState.invalid}
+                              variant="editAd"
+                              clearable
+                              wrapperClassName={
+                                fieldState.error
+                                  ? fieldErrorClassName
+                                  : fieldValue === undefined ||
+                                      fieldValue === ""
+                                    ? "!border-[#FFA940]"
+                                    : ""
+                              }
+                              endIcon={ClearIcon}
+                              endIconClassName="h-[14px] w-[14px]"
+                              placeholder={configField.placeholder}
+                            />
+                            {fieldState.error?.message ? (
+                              <p className="text-sm text-[#FF4D4F]">
+                                {fieldState.error.message}
+                              </p>
+                            ) : null}
+                          </>
                         )}
                       />
                     ) : (
                       <Controller
                         control={control}
                         name={fieldName}
-                        render={({ field }) => (
-                          <Select
-                            value={
-                              typeof field.value === "string"
-                                ? field.value
-                                : undefined
-                            }
-                            onValueChange={field.onChange}
-                          >
-                            <SelectTrigger
-                              className={
-                                fieldValue === undefined
-                                  ? "border-[#FFA940]!"
-                                  : ""
+                        render={({ field, fieldState }) => (
+                          <>
+                            <Select
+                              value={
+                                typeof field.value === "string"
+                                  ? field.value
+                                  : undefined
                               }
-                              variant="editAd"
+                              onValueChange={field.onChange}
                             >
-                              <SelectValue
-                                placeholder={configField.placeholder}
-                              />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                {configField.options?.map((option) => (
-                                  <SelectItem
-                                    key={option.value}
-                                    value={option.value}
-                                  >
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
+                              <SelectTrigger
+                                aria-invalid={fieldState.invalid}
+                                className={
+                                  fieldState.error
+                                    ? "border-[#FF4D4F]! shadow-[0px_0px_0px_2px_rgba(255,77,79,0.2)]"
+                                    : fieldValue === undefined ||
+                                        fieldValue === ""
+                                      ? "border-[#FFA940]!"
+                                      : ""
+                                }
+                                variant="editAd"
+                              >
+                                <SelectValue
+                                  placeholder={configField.placeholder}
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  {configField.options?.map((option) => (
+                                    <SelectItem
+                                      key={option.value}
+                                      value={option.value}
+                                    >
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                            {fieldState.error?.message ? (
+                              <p className="text-sm text-[#FF4D4F]">
+                                {fieldState.error.message}
+                              </p>
+                            ) : null}
+                          </>
                         )}
                       />
                     )}
@@ -259,29 +331,43 @@ export const LoadedForm = ({ data }: LoadedFormProps) => {
           </div>
         </div>
         <hr />
-        <div className="flex w-2/3 flex-col gap-2">
+        <div className="flex w-full flex-col gap-2">
           <p className="text-base font-semibold opacity-85">Описание</p>
           <Controller
             control={control}
             name="description"
-            render={({ field }) => (
-              <Textarea
-                {...field}
-                cols={2}
-                className="bg-card"
-                value={field.value ?? ""}
-              />
+            render={({ field, fieldState }) => (
+              <>
+                <Textarea
+                  {...field}
+                  cols={2}
+                  aria-invalid={fieldState.invalid}
+                  className="bg-card"
+                  value={typeof field.value === "string" ? field.value : ""}
+                />
+                {fieldState.error?.message ? (
+                  <p className="text-sm text-[#FF4D4F]">
+                    {fieldState.error.message}
+                  </p>
+                ) : null}
+              </>
             )}
           />
         </div>
         <div className="flex gap-2.5">
           <Button
             type="submit"
+            disabled={isPending}
             className="h-9.5 w-25.5 text-[#F3F3F3] font-normal"
           >
             Сохранить
           </Button>
-          <Button className="h-9.5 w-25.5 bg-[#D9D9D9] text-[#5A5A5A] font-normal">
+          <Button
+            type="button"
+            disabled={isPending}
+            onClick={() => reset(initialValues)}
+            className="h-9.5 w-25.5 bg-[#D9D9D9] text-[#5A5A5A] font-normal"
+          >
             Отменить
           </Button>
         </div>
