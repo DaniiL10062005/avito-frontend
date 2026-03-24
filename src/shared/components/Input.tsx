@@ -3,6 +3,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/utils/lib/utils";
 
+const inputErrorClassName =
+  "!border-[#FF4D4F] focus-within:!border-[#FF4D4F] focus-within:!shadow-[0px_0px_0px_2px_rgba(255,77,79,0.2)]";
+
 const inputVariants = cva(
   "bg-muted disabled:bg-input/50 dark:disabled:bg-input/80 h-8 rounded-lg px-2.5 py-1 text-sm transition-colors file:h-6 file:text-sm file:font-medium md:text-sm w-full min-w-0 outline-none file:inline-flex file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
   {
@@ -40,36 +43,62 @@ type InputProps = React.ComponentProps<"input"> & {
   wrapperClassName?: string;
   endIconClassName?: string;
   clearable?: boolean;
+  onClear?: () => void;
 } & VariantProps<typeof inputVariants>;
 
-function Input({
-  className,
-  type,
-  endIcon,
-  wrapperClassName,
-  endIconClassName,
-  clearable = false,
-  variant = "default",
-  ...props
-}: InputProps) {
+const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input(
+  {
+    className,
+    type,
+    endIcon,
+    wrapperClassName,
+    endIconClassName,
+    clearable = false,
+    onClear,
+    variant = "default",
+    disabled,
+    readOnly,
+    onChange,
+    ...props
+  },
+  ref,
+) {
   const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleInputRef = React.useCallback(
+    (node: HTMLInputElement | null) => {
+      inputRef.current = node;
+
+      if (typeof ref === "function") {
+        ref(node);
+        return;
+      }
+
+      if (ref) {
+        ref.current = node;
+      }
+    },
+    [ref],
+  );
 
   const handleClear = React.useCallback(() => {
     const input = inputRef.current;
 
-    if (!input || props.disabled || props.readOnly) {
+    if (!input || disabled || readOnly) {
       return;
     }
 
-    const nativeValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLInputElement.prototype,
-      "value",
-    )?.set;
+    if (onClear) {
+      onClear();
+    } else {
+      onChange?.({
+        target: { value: "" },
+        currentTarget: { value: "" },
+      } as React.ChangeEvent<HTMLInputElement>);
+    }
 
-    nativeValueSetter?.call(input, "");
-    input.dispatchEvent(new Event("input", { bubbles: true }));
     input.focus();
-  }, [props.disabled, props.readOnly]);
+  }, [disabled, onChange, onClear, readOnly]);
 
   if (endIcon) {
     return (
@@ -80,7 +109,7 @@ function Input({
         )}
       >
         <input
-          ref={inputRef}
+          ref={handleInputRef}
           type={type}
           data-slot="input"
           className={cn(
@@ -89,6 +118,9 @@ function Input({
             inputVariants({ variant }),
             className,
           )}
+          disabled={disabled}
+          readOnly={readOnly}
+          onChange={onChange}
           {...props}
         />
         {clearable ? (
@@ -119,13 +151,17 @@ function Input({
 
   return (
     <input
+      ref={handleInputRef}
       type={type}
       data-slot="input"
       className={cn(inputVariants({ variant }), className)}
+      disabled={disabled}
+      readOnly={readOnly}
+      onChange={onChange}
       {...props}
     />
   );
-}
+});
 
 // eslint-disable-next-line react-refresh/only-export-components
-export { Input, inputVariants, inputWrapperVariants };
+export { Input, inputErrorClassName, inputVariants, inputWrapperVariants };

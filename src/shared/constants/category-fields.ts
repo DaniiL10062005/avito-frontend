@@ -1,7 +1,7 @@
 import type { ItemCategory } from "../types/ads";
 import type { FieldConfig } from "../types/form-fields";
 
-export const categoryFields: Record<ItemCategory, FieldConfig[]> = {
+export const CATEGORY_FIELDS: Record<ItemCategory, FieldConfig[]> = {
   auto: [
     {
       key: "brand",

@@ -16,6 +16,11 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
+        "/ai-api": {
+          target: env.VITE_AI_URL,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/ai-api/, ""),
+        },
         "/api": {
           target: env.VITE_BACKEND_URL,
           changeOrigin: true,
